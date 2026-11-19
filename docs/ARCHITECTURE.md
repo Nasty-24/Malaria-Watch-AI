@@ -325,7 +325,7 @@ The backend should follow these security principles:
 
 The backend uses Pytest and pytest-django for automated testing.
 
-The current test suite contains 116 tests, all of which passed in the recorded test run.
+The current test suite contains 148 tests, all of which passed against PostgreSQL 18 + PostGIS 3.7 in the recorded test run (2026-11-19).
 
 Test coverage includes:
 

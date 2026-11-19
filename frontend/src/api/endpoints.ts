@@ -2,7 +2,7 @@
  * One function per backend endpoint (backend/config/urls.py). Filters are the
  * django-filter fields each endpoint declares in backend/apps/<app>/filters.py.
  */
-import { api, getOne, getPaged, unwrap } from "./client";
+import { api, getAll, getOne, getPaged, unwrap } from "./client";
 import type {
   Brief,
   BriefRequest,
@@ -26,6 +26,8 @@ export interface GeoFilter {
   country?: CountryCode | "";
   region_id?: number | null;
   year?: number | null;
+  /** ADM1 or ADM2: supported by prevalence, prevalence/uncertainty and population-at-risk. */
+  level?: string | null;
 }
 
 // ---- auth ---------------------------------------------------------------
@@ -66,28 +68,28 @@ export async function getRegionBoundaries(f: { country: string; level: string })
 
 // ---- prevalence -----------------------------------------------------------
 export const getPrevalence = (f: GeoFilter & { source_type?: string }) =>
-  getPaged<PrevalenceEstimate>("prevalence/", { ...f });
+  getAll<PrevalenceEstimate>("prevalence/", { ...f });
 
 export const getPrevalenceUncertainty = (f: GeoFilter) =>
-  getPaged<PrevalenceUncertainty>("prevalence/uncertainty/", { ...f });
+  getAll<PrevalenceUncertainty>("prevalence/uncertainty/", { ...f });
 
 export const getPrevalenceMap = (f: { country?: string; year?: number | null; resolution?: string; source_type?: string }) =>
   getOne<PrevalenceMap>("prevalence/map/", { ...f });
 
 // ---- other science domains ----------------------------------------------
-export const getPopulationAtRisk = (f: GeoFilter) => getPaged<PopulationAtRisk>("population-at-risk/", { ...f });
+export const getPopulationAtRisk = (f: GeoFilter) => getAll<PopulationAtRisk>("population-at-risk/", { ...f });
 
-export const getSpecies = (f: GeoFilter & { species?: string }) => getPaged<SpeciesRecord>("species/", { ...f });
+export const getSpecies = (f: GeoFilter & { species?: string }) => getAll<SpeciesRecord>("species/", { ...f });
 
 export const getDrugEfficacy = (f: GeoFilter & { drug?: string; followup_days?: number | null; record_type?: string }) =>
-  getPaged<DrugEfficacy>("drugs/efficacy/", { country: f.country, region_id: f.region_id, drug: f.drug,
+  getAll<DrugEfficacy>("drugs/efficacy/", { country: f.country, region_id: f.region_id, drug: f.drug,
     followup_days: f.followup_days, record_type: f.record_type });
 
 export const getResistance = (f: GeoFilter & { marker?: string }) =>
-  getPaged<ResistanceObservation>("resistance/", { ...f });
+  getAll<ResistanceObservation>("resistance/", { ...f });
 
 export const getResistanceTrends = (f: GeoFilter & { marker?: string }) =>
-  getPaged<MarkerTrend>("resistance/trends/", { ...f });
+  getAll<MarkerTrend>("resistance/trends/", { ...f });
 
 // ---- environment ----------------------------------------------------------
 /** Weather needs a region (with a loaded boundary) OR latitude+longitude - a country alone is rejected. */

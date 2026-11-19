@@ -18,11 +18,18 @@ if OSGEO4W_ROOT and os.name == "nt":
     _bin = os.path.join(_root, "bin")
     _dll_handle = os.add_dll_directory(_bin)
     os.environ["PATH"] = _bin + os.pathsep + os.environ.get("PATH", "")
-    os.environ["GDAL_DATA"] = os.path.join(_root, "apps", "gdal", "share", "gdal")
+    # OSGeo4W keeps GDAL data under apps/gdal; a conda env's Library folder uses share/gdal.
+    _gdal_data = os.path.join(_root, "apps", "gdal", "share", "gdal")
+    if not os.path.isdir(_gdal_data):
+        _gdal_data = os.path.join(_root, "share", "gdal")
+    os.environ["GDAL_DATA"] = _gdal_data
     os.environ["PROJ_LIB"] = os.path.join(_root, "share", "proj")
     os.environ["PROJ_DATA"] = os.environ["PROJ_LIB"]
     GEOS_LIBRARY_PATH = os.path.join(_bin, "geos_c.dll")
-    _gdal_libs = sorted(glob.glob(os.path.join(_bin, "gdal[0-9]*.dll")))
+    # OSGeo4W ships gdalNNN.dll; conda-forge ships gdal.dll.
+    _gdal_libs = sorted(glob.glob(os.path.join(_bin, "gdal[0-9]*.dll"))) or glob.glob(
+        os.path.join(_bin, "gdal.dll")
+    )
     if _gdal_libs:
         GDAL_LIBRARY_PATH = _gdal_libs[0]
 
@@ -100,6 +107,15 @@ DATABASES = {
     }
 }
 
+# Argon2 first (Django's recommended hasher; ~2.7 s PBKDF2 logins drop to well under a second).
+# PBKDF2 stays listed so existing hashes still verify and are upgraded on next login.
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+    "django.contrib.auth.hashers.ScryptPasswordHasher",
+]
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -153,7 +169,9 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_THROTTLE_RATES": {
         "anon": "60/min",
-        "user": "120/min",
+        # Signed-in UI pages fire ~8 reads each (getAll follows pagination); 120/min could
+        # be reached by a quick click-through. Scoped limits below still guard costly calls.
+        "user": "300/min",
         "login": "10/min",
         "brief": "20/min",
         "review": "60/min",

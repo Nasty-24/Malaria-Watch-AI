@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .geojson import to_geojson_geometry
+from .geojson import display_geometry, to_geojson_geometry
 from .models import Country, Region
 
 
@@ -37,5 +37,9 @@ class RegionSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if _wants_boundary(self.context, default=True):
-            data["boundary"] = to_geojson_geometry(instance.boundary)
+            if self.context.get("simplify_boundary") and hasattr(instance, "display_boundary"):
+                # List view: display geometry simplified in PostGIS (NULL = no boundary loaded).
+                data["boundary"] = display_geometry(instance.display_boundary)
+            else:
+                data["boundary"] = to_geojson_geometry(instance.boundary)
         return data

@@ -8,6 +8,7 @@ django-cors-headers>=4.7
 django-filter>=25.1
 drf-spectacular>=0.28
 psycopg[binary]>=3.2
+argon2-cffi>=23.1
 
 # Data fetch layer
 requests==2.34.2

@@ -1,7 +1,7 @@
 import django_filters
 from django.core.validators import RegexValidator
 
-from apps.core.filters import country_filter, region_id_filter, year_filter
+from apps.core.filters import country_filter, level_filter, region_id_filter, year_filter
 from apps.geography.models import AdminLevel
 
 from .models import PrevalenceEstimate
@@ -10,6 +10,7 @@ from .models import PrevalenceEstimate
 class PrevalenceFilter(django_filters.FilterSet):
     country = country_filter()
     region_id = region_id_filter()
+    level = level_filter()
     year = year_filter()
     source_type = django_filters.ChoiceFilter(choices=PrevalenceEstimate.SourceType.choices)
 

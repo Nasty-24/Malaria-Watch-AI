@@ -20,5 +20,12 @@ def year_filter(field_name="year"):
     return IntegerFilter(field_name=field_name, min_value=1900, max_value=2100)
 
 
+def level_filter():
+    """Administrative level of the row's region (ADM1 or ADM2)."""
+    from apps.geography.models import AdminLevel
+
+    return django_filters.ChoiceFilter(field_name="region__admin_level", choices=AdminLevel.choices)
+
+
 def region_id_filter():
     return IntegerFilter(field_name="region_id", min_value=1, max_value=2147483647)

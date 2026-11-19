@@ -26,6 +26,39 @@ def test_geojson_of_none_is_none():
     assert to_geojson_geometry(None) is None
 
 
+def _wiggly_boundary(clockwise=False):
+    # 400 vertices along the southern edge with 1 m jitter: simplification should drop them.
+    south = [(36.7 + i * 0.0005, -1.4 + (0.00001 if i % 2 else 0)) for i in range(400)]
+    ring = south + [(36.9, -1.4), (36.9, -1.2), (36.7, -1.2), (36.7, -1.4)]
+    if clockwise:
+        ring = list(reversed(ring))
+    from django.contrib.gis.geos import MultiPolygon, Polygon
+    return MultiPolygon(Polygon(ring), srid=4326)
+
+
+def test_display_geometry_is_simplified_rounded_and_oriented():
+    full = to_geojson_geometry(_wiggly_boundary(clockwise=True))
+    simple = to_geojson_geometry(_wiggly_boundary(clockwise=True), simplify=True)
+    ring = simple["coordinates"][0][0]
+    assert len(ring) < len(full["coordinates"][0][0]) / 10
+    assert signed_area(ring) > 0
+    assert all(round(c, 5) == c for point in ring for c in point)
+
+
+def test_display_geometry_keeps_tiny_shapes():
+    tiny = make_boundary(west=36.7, south=-1.4, east=36.7001, north=-1.3999)
+    simple = to_geojson_geometry(tiny, simplify=True)
+    assert simple["type"] == "MultiPolygon" and len(simple["coordinates"][0][0]) >= 4
+
+
+@pytest.mark.django_db
+def test_region_list_sends_display_geometry_and_detail_full(client):
+    region = make_region(boundary=_wiggly_boundary())
+    listed = client.get("/api/v1/regions/", {"country": "KEN"}).json()["data"][0]["boundary"]
+    detail = client.get(f"/api/v1/regions/{region.id}/").json()["data"]["boundary"]
+    assert len(listed["coordinates"][0][0]) < len(detail["coordinates"][0][0]) / 10
+
+
 @pytest.mark.django_db
 def test_region_detail_includes_boundary(client):
     region = make_region(boundary=make_boundary(clockwise=True))

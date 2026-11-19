@@ -72,7 +72,11 @@ The frontend holds no secrets. The Gemini key is used by the backend only; never
 
 ## Status
 
-- Type-check, production build and 28 automated tests pass.
-- **Not yet tested against a running backend**: it was built from the backend serializers and
-  tested with mocked responses in those exact shapes. Run it against the backend (with ML outputs
-  imported) before the demo and record results in the pull request.
+- Type-check, production build and 30 automated tests pass.
+- **Tested against the running backend** (2026-11-19, PostGIS with all ML outputs imported): every
+  page loads with real data and no API errors, the map draws all 47 Kenyan counties, and the
+  assistant returns a Gemini-written, number-checked brief.
+- List endpoints are read with `getAll`, which follows pagination; reading only the first page of
+  200 rows silently dropped data (the dashboard showed 25 of Kenya's 47 county estimates).
+  Prevalence, uncertainty and population-at-risk requests pass `level` (ADM1/ADM2) so the backend
+  returns only the level on screen.

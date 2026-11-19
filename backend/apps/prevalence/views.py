@@ -1,10 +1,12 @@
+from django.utils.decorators import method_decorator
+from django.views.decorators.gzip import gzip_page
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 
-from apps.geography.geojson import to_geojson_geometry
+from apps.geography.geojson import DisplayGeoJSON, display_geometry
 
 from .filters import PrevalenceFilter, PrevalenceMapFilter
 from .models import PrevalenceEstimate
@@ -30,6 +32,7 @@ class PrevalenceUncertaintyView(generics.ListAPIView):
     filterset_class = PrevalenceFilter
 
 
+@method_decorator(gzip_page, name="dispatch")  # public geometry only, no secrets in the body
 class PrevalenceMapView(generics.GenericAPIView):
     """GeoJSON FeatureCollection (RFC 7946, EPSG:4326) of estimates for regions that have boundaries.
 
@@ -48,12 +51,16 @@ class PrevalenceMapView(generics.GenericAPIView):
     def get(self, request):
         queryset = self.filter_queryset(self.get_queryset())
         total = queryset.count()
-        rows = list(queryset[:MAX_MAP_FEATURES])
+        # Simplify in PostGIS; the full boundary is only loaded for a rare fallback row.
+        rows = list(
+            queryset.annotate(display_geom=DisplayGeoJSON("region__boundary"))
+            .defer("region__boundary")[:MAX_MAP_FEATURES]
+        )
         features = [
             {
                 "type": "Feature",
                 "id": row.id,
-                "geometry": to_geojson_geometry(row.region.boundary),
+                "geometry": display_geometry(row.display_geom, lambda row=row: row.region.boundary),
                 "properties": {
                     "feature_id": str(row.id),
                     "region_id": row.region_id,

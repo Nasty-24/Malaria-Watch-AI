@@ -13,8 +13,9 @@ export default function PopulationRiskPage() {
   const regions = useRegions(sel.country, sel.level);
   const names = useMemo(() => new Map((regions.data ?? []).map((r) => [r.id, r.name])), [regions.data]);
   const q = useQuery({
-    queryKey: ["par", sel.country, sel.regionId],
-    queryFn: () => getPopulationAtRisk({ country: sel.country, region_id: sel.regionId, year: 2020 }),
+    queryKey: ["par", sel.country, sel.regionId, sel.level],
+    queryFn: () => getPopulationAtRisk({ country: sel.country, region_id: sel.regionId, year: 2020,
+      level: sel.regionId ? null : sel.level }),
   });
 
   // Keep only regions at the selected level (rows for both ADM1 and ADM2 are returned).

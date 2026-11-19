@@ -21,7 +21,8 @@ export default function PrevalencePage() {
   const [sourceType, setSourceType] = useState<"" | "modelled" | "observed">("modelled");
   const [year, setYear] = useState<string>("");
   const regions = useRegions(sel.country, sel.level);
-  const filter = { country: sel.country, region_id: sel.regionId, year: year ? Number(year) : null };
+  const filter = { country: sel.country, region_id: sel.regionId, year: year ? Number(year) : null,
+    level: sel.regionId ? null : sel.level };
 
   const prevalence = useQuery({
     queryKey: ["prevalence", filter, sourceType],

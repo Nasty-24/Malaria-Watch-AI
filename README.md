@@ -40,3 +40,43 @@ and public health researchers.
 
 This platform supports research and programme planning.
 It is not a diagnostic or treatment recommendation system.
+
+## Run locally (Windows, no admin rights)
+
+One-time setup used for the verified run (PostgreSQL 18.6 + PostGIS 3.7, GDAL from conda-forge):
+
+```bash
+# GDAL/GEOS/PROJ for GeoDjango (PostGIS is not packaged on conda-forge for Windows)
+conda create -p %USERPROFILE%\.conda\envs\mwgis -c conda-forge gdal geos proj
+# PostgreSQL: EDB "binaries" zip extracted to %USERPROFILE%\pgsql, then the PostGIS
+# bundle (download.osgeo.org/postgis/windows/pg18/) copied over bin/, lib/ and share/
+initdb -D %USERPROFILE%\pgdata -U postgres -A trust -E UTF8
+```
+
+In `.env` set `OSGEO4W_ROOT` to the conda env's `Library` folder (OSGeo4W and conda layouts
+both work), e.g. `OSGEO4W_ROOT=C:/Users/<you>/.conda/envs/mwgis/Library`. Create the role and
+database from `DB_*` in `.env`, and run `CREATE EXTENSION postgis` in that database and in
+`template1` (so the test database gets it too).
+
+Every session:
+
+```bash
+pg_ctl -D %USERPROFILE%\pgdata -l %USERPROFILE%\pgdata\server.log start
+cd backend && python manage.py runserver          # http://localhost:8000/api/v1/docs/
+cd frontend && npm run dev                        # http://localhost:5173
+```
+
+Loading data into a fresh database (about 1 minute):
+
+```bash
+cd backend
+python manage.py migrate
+# ADM1 before ADM2, for each of KEN, TZA, ETH:
+python manage.py import_boundaries ../data/raw/boundaries/geoBoundaries-KEN-ADM1.geojson --country KEN --level ADM1 --id-field shapeID --repair
+python manage.py import_ml_outputs
+python manage.py seed_weather_source
+python manage.py createsuperuser && python manage.py add_reviewer <username>
+```
+
+Tests: `python -m pytest` (repo root: data + ML), `cd backend && python -m pytest`,
+`python -m ml.src.smoke`, `cd frontend && npm test`.

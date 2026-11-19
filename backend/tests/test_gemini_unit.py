@@ -80,6 +80,17 @@ def test_ungrounded_reply_is_rejected():
     assert r["grounding"]["unsupported"] == ["1.2 million"]
 
 
+def test_numbers_from_listed_uncertainties_are_grounded():
+    # The prompt lists the uncertainties, so a reply may repeat their counts.
+    gaps = ["Showing 5 of 18 resistance marker records."]
+    reply = "Modelled PfPR in Kisumu was 19.6% in 2020. Only 5 of 18 resistance marker records are shown."
+    r = summarise(ON, "Kisumu", FINDINGS, gaps, opener=FakeOpener(reply))
+    assert r["used"] and r["reason"] == "ok"
+    # Without the uncertainties those counts are still rejected.
+    r = summarise(ON, "Kisumu", FINDINGS, [], opener=FakeOpener(reply))
+    assert r["reason"] == "ungrounded_numbers"
+
+
 @pytest.mark.parametrize("opener,reason", [
     (FakeOpener(error=urllib.error.HTTPError("u", 429, "rate", {}, None)), "http_429"),
     (FakeOpener(error=urllib.error.URLError("down")), "network_or_timeout"),

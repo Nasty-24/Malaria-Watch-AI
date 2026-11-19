@@ -235,3 +235,19 @@ def test_trend_needs_at_least_one_frequency():
 @pytest.mark.django_db
 def test_openapi_schema_generates(client):
     assert client.get("/api/v1/schema/").status_code == 200
+
+@pytest.mark.django_db
+def test_level_filter_limits_rows_to_one_admin_level(client):
+    from tests.factories import make_population, make_prevalence, make_region, make_source
+
+    source = make_source()
+    adm1 = make_region(name="Kisumu", external_id="A1")
+    adm2 = make_region(name="Kisumu East", level="ADM2", external_id="A2", parent=adm1)
+    for region in (adm1, adm2):
+        make_prevalence(region, source)
+        make_population(region, source)
+    for path in ("prevalence/", "prevalence/uncertainty/", "population-at-risk/"):
+        rows = client.get(f"/api/v1/{path}", {"country": "KEN", "level": "ADM2"}).json()["data"]
+        assert [r["region_id"] for r in rows] == [adm2.id], path
+        assert len(client.get(f"/api/v1/{path}", {"country": "KEN"}).json()["data"]) == 2
+    assert client.get("/api/v1/prevalence/", {"level": "ADM9"}).status_code == 400

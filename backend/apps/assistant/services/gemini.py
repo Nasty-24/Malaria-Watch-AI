@@ -144,7 +144,11 @@ def summarise(config: GeminiConfig, place_label: str, findings: list[dict], unce
         logger.warning("Gemini summary not used: %s", exc)
         result["reason"] = str(exc)
         return result
-    grounding = check_numbers(text, {"findings": findings, "place": place_label})
+    # The prompt also lists the uncertainties (e.g. "Showing 5 of 18 ... records"), so numbers
+    # copied from them are grounded too; anything else still rejects the reply.
+    grounding = check_numbers(
+        text, {"findings": findings, "uncertainties": uncertainties, "place": place_label}
+    )
     result["grounding"] = grounding
     if not grounding["grounded"]:
         result["reason"] = "ungrounded_numbers"

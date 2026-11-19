@@ -142,6 +142,24 @@ export async function getPaged<T>(path: string, params: Record<string, unknown> 
   return unwrapPaged<T>(r.data);
 }
 
+/** Max pages followed by getAll (200 rows each). Large enough for any one country's rows. */
+export const MAX_PAGES = 25;
+
+/**
+ * Every row matching the filters, following the backend's pagination. A single page holds at
+ * most 200 rows, and reading only the first page silently drops data (e.g. Kenya has 337
+ * modelled 2020 estimates across ADM1 + ADM2).
+ */
+export async function getAll<T>(path: string, params: Record<string, unknown> = {}): Promise<Paged<T>> {
+  const first = await getPaged<T>(path, { ...params, page: 1 });
+  const totalPages = Math.min(first.pagination?.total_pages ?? 1, MAX_PAGES);
+  if (totalPages <= 1) return first;
+  const rest = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, i) => getPaged<T>(path, { ...params, page: i + 2 })),
+  );
+  return { ...first, items: first.items.concat(...rest.map((r) => r.items)) };
+}
+
 export async function getOne<T>(path: string, params: Record<string, unknown> = {}): Promise<T> {
   const r = await api.get<Envelope<T>>(path, { params: cleanParams(params) });
   return unwrap<T>(r.data);

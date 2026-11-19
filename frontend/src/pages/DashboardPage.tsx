@@ -23,11 +23,13 @@ export default function DashboardPage() {
   const regions = useRegions(sel.country, sel.level);
   const levelIds = useMemo(() => new Set((regions.data ?? []).map((r) => r.id)), [regions.data]);
   const geo = { country: sel.country, region_id: sel.regionId };
+  // Rows for the selected level only (the API returns ADM1 and ADM2 rows otherwise).
+  const level = sel.regionId ? null : sel.level;
 
-  const prev = useQuery({ queryKey: ["prevalence", { ...geo, year: 2020 }, "modelled"],
-    queryFn: () => getPrevalence({ ...geo, year: 2020, source_type: "modelled" }) });
-  const unc = useQuery({ queryKey: ["prevalence-uncertainty", { ...geo, year: 2020 }],
-    queryFn: () => getPrevalenceUncertainty({ ...geo, year: 2020 }) });
+  const prev = useQuery({ queryKey: ["prevalence", { ...geo, year: 2020, level }, "modelled"],
+    queryFn: () => getPrevalence({ ...geo, year: 2020, level, source_type: "modelled" }) });
+  const unc = useQuery({ queryKey: ["prevalence-uncertainty", { ...geo, year: 2020, level }],
+    queryFn: () => getPrevalenceUncertainty({ ...geo, year: 2020, level }) });
   const par = useQuery({ queryKey: ["par", sel.country, sel.regionId],
     queryFn: () => getPopulationAtRisk({ ...geo, year: 2020 }) });
   const species = useQuery({ queryKey: ["species", sel.country, sel.regionId, ""],
